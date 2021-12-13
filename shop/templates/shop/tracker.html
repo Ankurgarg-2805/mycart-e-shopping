@@ -1,0 +1,123 @@
+{% extends 'shop/basic.html' %}
+{% block title%} My Awesome Cart Tracker{% endblock %}
+{% block body %}
+<div class="container">
+    <div class="col my-4">
+        <h2>Enter your Order Id and Email address to track your order</h2>
+        <form method="post" action="#" id="trackerForm">{% csrf_token %}
+            <div class="form-row">
+                <div class="form-group col-md-6">
+                    <label for="orderId">Order Id</label>
+                    <input type="text" class="form-control" id="orderId" name="orderId" placeholder="Order Id">
+                </div>
+                <div class="form-group col-md-6">
+                    <label for="email">Email</label>
+                    <input type="email" class="form-control" id="email" name="email" placeholder="Email">
+                </div>
+                <button type="submit" class="btn btn-primary">Track Order</button>
+            </div>
+        </form>
+    </div>
+    <div class="col my-4" id="ord_details">
+        <h2>Your Order Details</h2>
+        <div class="my-4">
+            <ul class="list-group" id="citems">
+            </ul>
+        </div>
+        <h2>Your Order Status</h2>
+        <div class="my-4">
+            <ul class="list-group" id="items">
+            </ul>
+        </div>
+    </div>
+    <span class="col my-8" id="inst">
+        <ul class="list-group">
+            <li class="list-group-item d-flex justify-content-between align-items-center"><h5>Enter your order Id and Email and click Track Order to find details about your order!</h5></li>
+        </ul>
+    </span>
+    <span class="col my-8" id="oops">
+        <ul class="list-group">
+            <li class="list-group-item d-flex justify-content-between align-items-center"><h5>OOPS! Looks like you entered incorrect Order ID or Email Address</h5></li>
+        </ul>
+    </span>
+</div>
+{% endblock %}
+{% block js %}
+<script>
+$('#oops').hide();
+$('#ord_details').hide();
+$('#trackerForm').submit(function(event) {
+    $('#inst').hide();
+    $('#oops').hide();
+    $('#ord_details').hide();
+    $('#items').empty();
+    $('#citems').empty();
+    var formData = {
+        'orderId': $('input[name=orderId]').val(),
+        'email': $('input[name=email]').val(),
+        'csrfmiddlewaretoken': $('input[name=csrfmiddlewaretoken]').val()
+    };
+    $.ajax({
+            type: 'POST',
+            url: '/shop/tracker/',
+            data: formData,
+            encode: true
+        })
+        .done(function(data) {
+            console.log(data)
+            mydata = JSON.parse(data);
+            updates = mydata[0];
+            console.log(updates);
+            if (updates != undefined) {
+                $('#ord_details').show();
+                for (i = 0; i < updates.length; i++) {
+                    let text = updates[i]['text'];
+                    let date = updates[i]['time'].slice(0, 10);
+                    let time = updates[i]['time'].slice(11, 19);
+                    mystr = `<li class="list-group-item d-flex justify-content-between align-items-center">
+                                    ${text}
+                                <span class="badge badge-primary badge-pill" style="padding: 10px;
+                                    padding-bottom: 8px;
+                                    padding-top: 8px;
+                                    background-color: #6c757d;">${date} &nbsp; ${time}</span>
+                            </li>`
+                    $('#items').append(mystr);
+                }
+                cart = JSON.parse(mydata[1]);
+                var total = 0;
+                for (item in cart) {
+                    let name = cart[item][1];
+                    let qty = cart[item][0];
+                    let price = cart[item][2];
+                    total = total + qty * price;
+                    console.log(name, qty, price, total, cart);
+                    mystr = `<li class="list-group-item d-flex justify-content-between align-items-center" >
+                     
+                    <div class="ms-2 me-auto">
+                        <div class="fw-bold"><b>${name}</b></div>
+                                Price: Rs. ${price}
+                    </div>
+                    <span class="badge badge-primary badge-pill" style="padding: 15px;
+                        padding-bottom: 8px;
+                        padding-top: 8px; background-color: #6c757d;">Qty: ${qty}</span>
+                </li>`
+                    $('#citems').append(mystr);
+                }
+                totalstr = `<ul class="list-group mt-2">
+                    <li class="list-group-item active d-flex justify-content-between align-items-center" aria-current="true" style=" background-color: #343a40" >
+                    The Total Amount Paid for your Order is 
+                    <span class="badge rounded-pill bg-light text-dark" style="padding: 10px;
+                        padding-bottom: 8px;
+                        padding-top: 8px;;">Rs. ${total}</span>
+                    </li>
+                </ul>`
+                $('#citems').append(totalstr);
+            } else {
+                $('#oops').show();
+                $('#ord_details').hide();
+            }
+        });
+    event.preventDefault();
+});
+</script>
+{% endblock %}
